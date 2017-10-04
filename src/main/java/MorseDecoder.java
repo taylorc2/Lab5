@@ -55,6 +55,12 @@ public class MorseDecoder {
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
             // Get the right number of samples from the inputFile
             // Sum all the samples together and store them in the returnBuffer
+            inputFile.readFrames(sampleBuffer, BIN_SIZE);
+            double sum = 0;
+            for (double sample : sampleBuffer) {
+                sum += Math.abs(sample);
+            }
+            returnBuffer[binIndex] += sum;
         }
         return returnBuffer;
     }
@@ -63,7 +69,7 @@ public class MorseDecoder {
     private static final double POWER_THRESHOLD = 10;
 
     /** Bin threshold for dots or dashes. Related to BIN_SIZE. You may need to modify this value. */
-    private static final int DASH_BIN_COUNT = 8;
+    private static final int DASH_BIN_COUNT = 9;
 
     /**
      * Convert power measurements to dots, dashes, and spaces.
@@ -82,12 +88,33 @@ public class MorseDecoder {
          * transitions. You will also have to store how much power or silence you have seen.
          */
 
+        String dotsAndDash = "";
+        int consecutivePower = 0;
+        int consecutiveSilence = 0;
+
+        for (int i = 0; i < powerMeasurements.length; i++) {
+
+            if (powerMeasurements[i] > POWER_THRESHOLD && consecutivePower > 0) {
+                consecutivePower++;
+            } else if (powerMeasurements[i] > POWER_THRESHOLD && consecutivePower == 0) {
+                dotsAndDash += (consecutiveSilence > DASH_BIN_COUNT) ? " " : "" ;
+                consecutivePower = 1;
+                consecutiveSilence = 0;
+            } else if (powerMeasurements[i] < POWER_THRESHOLD && consecutiveSilence > 0) {
+                consecutiveSilence++;
+            } else if (powerMeasurements[i] < POWER_THRESHOLD && consecutiveSilence == 0) {
+                dotsAndDash += (consecutivePower > DASH_BIN_COUNT) ? "-" : "." ;
+                consecutiveSilence = 1;
+                consecutivePower = 0;
+            }
+        }
+
         // if ispower and waspower
         // else if ispower and not waspower
         // else if issilence and wassilence
         // else if issilence and not wassilence
 
-        return "";
+        return dotsAndDash;
     }
 
     /**
